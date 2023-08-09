@@ -1,37 +1,54 @@
-import logo from './logo.svg';
-import './App.css';
-import './component/numbers'
+import React, { useState, useEffect } from 'react';
 
-import React, {useEffect, useState} from 'react';
-import axios from axios;
-import { response } from 'express';
+function NumberManagementService() {
+  const [mergedNumbers, setMergedNumbers] = useState([]);
+  const [inputUrls, setInputUrls] = useState('');
+  const [error, setError] = useState('');
 
-function number(){
-  const [numbers, setNumbers] = useState([]);
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const urls = inputUrls.split('\n').filter((url) => url.trim() !== '');
+    fetchNumbers(urls);
+  };
 
-  useEffect(()=>{
-    fetch('http://localhost:8008/numbers').then(response=>{
-      setNumbers(response.data.numbers);
-    }).then(data=>{
-      SVGMetadataElement(data);
-    }).catch(error => {
-      console.error(error);
-    });
-  }, []);
+  async function fetchNumbers(urls) {
+    try {
+      const promises = urls.map(async (url) => {
+        const response = await fetch(url);
+        const data = await response.json();
+        return data.numbers;
+      });
 
-}
-return (
-  <div>
-    numbers.map(number (key={number}));
-  </div>
-)
-function App() {
+      const numbersArrays = await Promise.all(promises);
+      const merged = numbersArrays
+        .flat()
+        .filter((num, index, arr) => arr.indexOf(num) === index)
+        .sort((a, b) => a - b);
+      setMergedNumbers(merged);
+      setError('');
+    } catch (error) {
+      console.error('Error fetching numbers:', error);
+      setError('An error occurred while fetching numbers.');
+    }
+  }
+
   return (
-    <div className="App">
-      <number/>
+    <div>
+      <h1>Merged Unique Numbers</h1>
+      <form onSubmit={handleSubmit}>
+        <textarea
+          value={inputUrls}
+          onChange={(e) => setInputUrls(e.target.value)}
+          placeholder="Enter URLs, one per line"
+          rows={4}
+        />
+        <button type="submit">Fetch Numbers</button>
+      </form>
+      {error && <p style={{ color: 'red' }}>{error}</p>}
+      <p>{JSON.stringify({ numbers: mergedNumbers })}</p>
     </div>
   );
 }
 
-
-export default App;
+export default NumberManagementService;
+  
